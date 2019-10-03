@@ -14,12 +14,8 @@ class _SplashPageState extends State<SplashPage> {
     return SplashScreen(
         seconds: 3,
         navigateAfterSeconds: DashboardScreen(),
-        // title: Text(
-        //   'Smart Point',
-        //   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20.0),
-        // ),
         image: Image.asset('assets/logo2.png'),
-        photoSize: 250,
+        photoSize: 230,
         );
   }
 }

@@ -1,16 +1,52 @@
+import 'dart:convert';
 import 'package:flutter/cupertino.dart';
-import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:smartpoint/profile.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'details.dart';
 import 'util/data.dart';
 import 'package:barcode_scan/barcode_scan.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 
-void main() => runApp(new Home());
+Future<Post> fetchPost() async {
+  final response =
+      await http.get('https://smart-point.000webhostapp.com/get.php');
+  if (response.statusCode == 200) {
+    // If the call to the server was successful, parse the JSON.
+    return Post.fromJson(json.decode(response.body));
+  } else {
+    // If that call was not successful, throw an error.
+    throw Exception('Failed to load post');
+  }
+}
+
+class Post {
+  final String id;
+  final String name;
+  final String email;
+  final String points;
+
+  Post({this.id, this.name, this.email, this.points});
+
+  factory Post.fromJson(Map<String, dynamic> json) {
+    return Post(
+      id: json['id'],
+      name: json['name'],
+      email: json['email'],
+      points: json['points'],
+    );
+  }
+}
+
+// void main() => runApp(new Home());
+void main() => runApp(Home(post: fetchPost()));
 
 class Home extends StatefulWidget {
+  final Future<Post> post;
+  const Home({Key key, this.post}) : super(key: key);
+
   @override
   _HomeState createState() => new _HomeState();
 }
@@ -19,16 +55,9 @@ class _HomeState extends State<Home> {
   String barcode = "";
   String text = "a";
   int points = 0;
-  final databaseReference = FirebaseDatabase.instance.reference();
-
-  void getData(){
-    databaseReference.once().then((DataSnapshot snapshot) {
-      print('Data : ${snapshot.value}');
-    });
-  }
-
+  
   @override
-  initState() {
+  void initState() {
     super.initState();
   }
 
@@ -37,7 +66,6 @@ class _HomeState extends State<Home> {
     return Scaffold(
         body: Container(
       child: GestureDetector(
-        onTap: (){getData();},
         child: DecoratedBox(
           position: DecorationPosition.background,
           decoration: BoxDecoration(
@@ -73,15 +101,15 @@ class _HomeState extends State<Home> {
                   Column(
                     children: <Widget>[
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
+                        padding: const EdgeInsets.fromLTRB(0, 32, 0, 0),
                         child: Image.asset(
                           'assets/logo2.png',
                           // width: 300,
-                          height: 210,
+                          height: 150,
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(0, 35, 0, 0),
+                        padding: const EdgeInsets.fromLTRB(0, 60, 0, 0),
                         child: RaisedButton(
                           padding: EdgeInsets.fromLTRB(40, 0, 40, 0),
                           textColor: Colors.black,
@@ -102,7 +130,7 @@ class _HomeState extends State<Home> {
                     ],
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(5, 65, 0, 1),
+                    padding: const EdgeInsets.fromLTRB(0, 65, 0, 1),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.end,
@@ -116,24 +144,42 @@ class _HomeState extends State<Home> {
                         SizedBox(
                           height: 10,
                         ),
-                        Container(
-                            child: Text(
-                          "ปิยะวัฒน์ จังอินทร์",
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontFamily: "kanit",
-                          ),
-                        )),
-                        Container(
-                          alignment: Alignment(0.75, 0),
-                          child: Text(
-                            '$points',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 40,
-                              color: Colors.green,
-                            ),
-                          ),
+                        FutureBuilder<Post>(
+                          future: fetchPost(),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasData) {
+                              return Text(
+                                "${snapshot.data.name}",
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontFamily: "kanit",
+                                ),
+                              );
+                            } else if (snapshot.hasError) {
+                              return Text("${snapshot.error}");
+                            }
+                            // By default, show a loading spinner.
+                            return CircularProgressIndicator();
+                          },
+                        ),
+                        FutureBuilder<Post>(
+                          future: fetchPost(),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasData) {
+                              return Text(
+                                "${snapshot.data.points}",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 40,
+                                  color: Colors.green,
+                                ),
+                              );
+                            } else if (snapshot.hasError) {
+                              return Text("${snapshot.error}");
+                            }
+                            // By default, show a loading spinner.
+                            return CircularProgressIndicator();
+                          },
                         ),
                         Container(
                           padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
@@ -181,10 +227,19 @@ class _HomeState extends State<Home> {
     ));
   }
 
-  void createRecord() {
-    databaseReference.child("1").set({
-      'points': '$points',
-    });
+  createRecord() async {
+    const url = "https://smart-point.000webhostapp.com/adddata.php";
+    int c = 0;
+    if (await canLaunch(url)) {
+      await launch(url, forceWebView: true);
+      c = 1;
+      if (c == 1) {
+        closeWebView();
+        print("No");
+      }
+    } else {
+      throw 'Could not launch $url';
+    }
   }
 
   var alertStyle = AlertStyle(
@@ -218,7 +273,7 @@ class _HomeState extends State<Home> {
             style: alertStyle,
             type: AlertType.success,
             title: "สำเร็จ",
-            desc: "แต้มของคุณคือ$pointsแต้ม",
+            // desc: "แต้มของคุณคือ$pointsแต้ม",
             buttons: [
               DialogButton(
                 child: Text(
@@ -265,8 +320,6 @@ class _HomeState extends State<Home> {
   }
 }
 
-
-
 Widget myshop = Container(
     // margin: EdgeInsets.symmetric(vertical: 20.0),
     height: 275,
@@ -307,9 +360,9 @@ Widget myshop = Container(
                   Text(
                     furniture['name'],
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                    ),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: Colors.white),
                   ),
                 ],
               ),
@@ -411,4 +464,3 @@ class Banner extends StatelessWidget {
     ));
   }
 }
-
