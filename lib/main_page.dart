@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-// import 'package:flutter_bottom_bar_navigation/profile.dart';
-// import 'package:flutter_bottom_bar_navigation/home.dart';
-// import 'package:flutter_bottom_bar_navigation/Search.dart';
 import 'package:smartpoint/Search.dart';
 import 'package:smartpoint/home.dart';
 import 'package:smartpoint/page/splash_page.dart';
@@ -63,16 +60,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
       this._page = page;
     });
   }
+    void main() {
+      runApp( new MaterialApp(
+        home: new Home(),
+        routes: <String, WidgetBuilder>{
+          "/home" : (BuildContext context)=> new Home(),
+          //add more routes here
+        },
+
+      ));
+    }
 
   @override
   Widget build(BuildContext context) {
     return new Scaffold(
-      // appBar: new AppBar(
-      //   title: new Text(
-      //     widget.title,
-      //     style: new TextStyle(color: const Color(0xFFFFFFFFF)),
-      //   ),
-      // ),
       body: new PageView(
         children: [
           new Home(),
